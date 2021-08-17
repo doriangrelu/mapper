@@ -56,6 +56,13 @@ class EntityDomainWrapperImpl<E, D> implements EntityDomainWrapper<E, D> {
 		this.priority = priority;
 	}
 
+	@Override public E toEntity(D domain, Class<E> clazz, boolean triggerMap) {
+		return this.to(domain, this.toEntityConverter, clazz,
+				triggerMap ?
+						this.entityMapper :
+						defaultDeque());
+	}
+
 	@Override
 	public E toEntity(D domain, Class<E> clazz, boolean triggerMap) {
 		return this.to(domain, this.toEntityConverter, clazz, this.buildMapperDelegate(triggerMap, this.entityMapper));
@@ -64,6 +71,13 @@ class EntityDomainWrapperImpl<E, D> implements EntityDomainWrapper<E, D> {
 	@Override
 	public E toEntity(D domain, boolean triggerMap) {
 		return this.toEntity(domain, this.entityClazz, triggerMap);
+	}
+
+	@Override public List<E> toEntities(List<D> domains, Class<E> clazz, boolean triggerMap) {
+		return this.tos(domains, this.toEntityConverter, clazz,
+				triggerMap ?
+						this.entityMapper :
+						defaultDeque());
 	}
 
 	@Override
@@ -78,6 +92,13 @@ class EntityDomainWrapperImpl<E, D> implements EntityDomainWrapper<E, D> {
 
 	public D toDomain(E entity, boolean triggerMap) {
 		return this.toDomain(entity, this.domainClazz, triggerMap);
+	}
+
+	@Override public D toDomain(E entity, Class<D> clazz, boolean triggerMap) {
+		return this.to(entity, this.toDomainConverter, clazz,
+				triggerMap ?
+						this.domainMapper :
+						defaultDeque());
 	}
 
 	@Override
