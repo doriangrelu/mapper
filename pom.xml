@@ -20,7 +20,7 @@
 
     <groupId>com.grelu.model-mapper</groupId>
     <artifactId>parent</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
 
     <properties>
         <maven.compiler.source>16</maven.compiler.source>
