@@ -4,6 +4,10 @@ import com.grelu.domain.wrapper.WrapperContainer;
 import org.modelmapper.ModelMapper;
 import org.springframework.util.Assert;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 public class WrapperContext<F, T> {
 
 	private static WrapperContainer container = null;
@@ -11,12 +15,13 @@ public class WrapperContext<F, T> {
 	private final ModelMapper modelMapper;
 	private final F value;
 	private Class<T> clazz;
+	private final Map<String, Object> parameters;
 
-	public WrapperContext(final ModelMapper modelMapper, final F value, final Class<T> clazz) {
+	public WrapperContext(final ModelMapper modelMapper, final F value, final Class<T> clazz, Map<String, Object> parameters) {
 		this.modelMapper = modelMapper;
 		this.value = value;
 		this.clazz = clazz;
-
+		this.parameters = new HashMap<>(parameters); // On clone pour avoir une instance isolée
 	}
 
 	public static void setContainer(WrapperContainer container) {
@@ -39,6 +44,10 @@ public class WrapperContext<F, T> {
 			throw new IllegalStateException("Missing required default model mapper");
 		}
 		return mapper.map(this.getValue(), clazz);
+	}
+
+	public Optional<Object> getParameter(String name) {
+		return Optional.ofNullable(this.parameters.getOrDefault(name, null));
 	}
 
 	/**

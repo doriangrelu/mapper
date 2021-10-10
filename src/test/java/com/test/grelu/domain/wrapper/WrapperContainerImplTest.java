@@ -1,6 +1,6 @@
 package com.test.grelu.domain.wrapper;
 
-import com.grelu.domain.wrapper.EntityDomainWrapper;
+import com.grelu.domain.wrapper.ObjectWrapper;
 import com.grelu.domain.wrapper.WrapperContainer;
 import com.grelu.domain.wrapper.builder.WrapperBuilder;
 import com.grelu.domain.wrapper.impl.WrapperContainerImpl;
@@ -19,22 +19,22 @@ public class WrapperContainerImplTest {
 
 	@Test
 	public void testAddWrapperInContainer() throws NoSuchFieldException, IllegalAccessException {
-		EntityDomainWrapper<EntityMock, DomainMock> firstWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
-		EntityDomainWrapper<EntityMock, DomainMock> secondWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
+		ObjectWrapper<EntityMock, DomainMock> firstWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
+		ObjectWrapper<EntityMock, DomainMock> secondWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
 
 		WrapperContainer container = new WrapperContainerImpl(new ArrayList<>());
 
-		container.registerWrapper(firstWrapper)
-				.registerWrapper(secondWrapper);
+		container.registerWrappers(firstWrapper)
+				.registerWrappers(secondWrapper);
 
-		List<EntityDomainWrapper<?, ?>> wrappers = ReflectionUtils.get(container, "wrappers");
+		List<ObjectWrapper<?, ?>> wrappers = ReflectionUtils.get(container, "wrappers");
 
 		assertThat(wrappers).hasSize(2).contains(firstWrapper, secondWrapper);
 	}
 
 	@Test
 	public void testWrapperEntityWithOptions() throws NoSuchFieldException, IllegalAccessException {
-		EntityDomainWrapper<EntityMock, DomainMock> firstWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class)
+		ObjectWrapper<EntityMock, DomainMock> firstWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class)
 				.setSupportEntity((clazz, option) -> clazz.equals(EntityMock.class) && "light".equals(option))
 				.setPriority(99)
 				.addEntityMapper(o -> {
@@ -43,10 +43,10 @@ public class WrapperContainerImplTest {
 				})
 				.build();
 
-		EntityDomainWrapper<EntityMock, DomainMock> secondWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
+		ObjectWrapper<EntityMock, DomainMock> secondWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
 
 		WrapperContainer container = new WrapperContainerImpl(new ArrayList<>());
-		container.registerWrapper(secondWrapper, firstWrapper);
+		container.registerWrappers(secondWrapper, firstWrapper);
 
 		EntityMock en = new EntityMock();
 		en.lastname = "jacques";

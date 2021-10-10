@@ -1,49 +1,68 @@
 package com.grelu.domain.wrapper.impl;
 
-import com.grelu.domain.wrapper.EntityDomainWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.grelu.domain.wrapper.ObjectWrapper;
 import com.grelu.domain.wrapper.WrapperContainer;
 import com.grelu.domain.wrapper.builder.WrapperBuilder;
 import com.grelu.domain.wrapper.builder.WrapperContext;
+import org.modelmapper.internal.Pair;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 @Component
 public class WrapperContainerImpl implements WrapperContainer {
 
-	private final List<EntityDomainWrapper<?, ?>> wrappers;
+	private final List<ObjectWrapper<?, ?>> wrappers;
 
-	private EntityDomainWrapper<?, ?> defaultWrapper = null;
+	private final ObjectMapper defaultObjectMapper;
 
-	public WrapperContainerImpl(List<EntityDomainWrapper<?, ?>> wrappersComponents) {
+	private ObjectWrapper<?, ?> defaultWrapper = null;
+
+	public WrapperContainerImpl(List<ObjectWrapper<?, ?>> wrappersComponents) {
 		this.wrappers = Collections.synchronizedList(wrappersComponents);
+		this.defaultObjectMapper = new ObjectMapper();
+	}
+
+	@PostConstruct
+	public void start() {
 		WrapperContext.setContainer(this);
 	}
 
+	@PreDestroy
+	public void stop() {
+		WrapperContext.setContainer(null);
+	}
+
 	@Override
-	public WrapperContainer registerWrapper(EntityDomainWrapper<?, ?> wrapper) {
+	public WrapperContainer registerWrapper(ObjectWrapper<?, ?> wrapper) {
 		this.wrappers.add(wrapper);
 		return this;
 	}
 
 	@Override
-	public WrapperContainer registerWrapper(EntityDomainWrapper<?, ?>... wrapper) {
+	public WrapperContainer registerWrappers(ObjectWrapper<?, ?>... wrapper) {
 		this.wrappers.addAll(List.of(wrapper));
 		return this;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <E, D> E toEntity(Class<?> clazz, D domain, boolean triggerMap, String option) {
-		return this.<E, D>resolveEntityWrapper(clazz, option).toEntity(domain, (Class<E>) clazz, triggerMap);
+	public <E, D> E toEntity(Class<?> clazz, D fromSecond, boolean triggerMap, String option) {
+		return this.<E, D>resolveEntityWrapper(clazz, option).toEntity(fromSecond, (Class<E>) clazz, triggerMap);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <E, D> D toDomain(Class<?> clazz, E entity, boolean triggerMap, String option) {
-		return this.<E, D>resolveDomainWrapper(clazz, option).toDomain(entity, (Class<D>) clazz, triggerMap);
+	public <E, D> D toData(Class<?> clazz, E fromEntity, boolean triggerMap, String option) {
+		return this.<E, D>resolveDataWrapper(clazz, option).toData(fromEntity, (Class<D>) clazz, triggerMap);
 	}
 
 	@Override
@@ -52,29 +71,81 @@ public class WrapperContainerImpl implements WrapperContainer {
 	}
 
 	@Override
-	public <D> D mapDomain(Class<?> clazz, D domain, String option) {
-		return this.<Object, D>resolveDomainWrapper(clazz, option).mapDomain(domain);
+	public <D> D mapData(Class<?> clazz, D data, String option) {
+		return this.<Object, D>resolveDataWrapper(clazz, option).mapData(data);
 	}
 
 	@Override
-	public <E, D> EntityDomainWrapper<? super E, D> resolveDomainWrapper(Class<?> target, String option) {
+	public <E, D> ObjectWrapper<? super E, D> resolveDataWrapper(Class<?> target, String option) {
 		return this.resolveWrapper(
-				entityDomainWrapper -> entityDomainWrapper.supportDomain(target, option),
+				entityDomainWrapper -> entityDomainWrapper.supportData(target, option),
 				"Missing required mapper for " + target + " with options {" + option + "}"
 		);
 	}
 
 	@Override
-	public <E, D> EntityDomainWrapper<E, ? super D> resolveEntityWrapper(Class<?> target, String option) {
+	public <E, D> ObjectWrapper<E, ? super D> resolveEntityWrapper(Class<?> target, String option) {
 		return this.resolveWrapper(
 				entityDomainWrapper -> entityDomainWrapper.supportEntity(target, option),
 				"Missing required mapper for " + target + " with options {" + option + "}"
 		);
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
-	private <E, D> EntityDomainWrapper<E, D> resolveWrapper(Predicate<EntityDomainWrapper<?, ?>> predicate, String exceptionMessage) {
-		return (EntityDomainWrapper<E, D>) this.wrappers.stream()
+	public <E, D> List<D> toDataObjects(List<E> fromEntities, Pair<Class<? extends E>, Class<? extends D>>... clazz) {
+		return this.tosObject(fromEntities, this::toData, Arrays.asList(clazz));
+	}
+
+	@SafeVarargs
+	@Override
+	public final <E, D> List<Map<String, Object>> toDataObjectsFlatten(List<E> fromEntities, Pair<Class<? extends E>, Class<? extends D>>... clazz) {
+		return this.flatMap(this.toDataObjects(fromEntities, clazz));
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public <E, D> List<E> toEntityObjects(List<D> fromDatas, Pair<Class<? extends D>, Class<? extends E>>... clazz) {
+		return this.tosObject(fromDatas, this::toEntity, Arrays.asList(clazz));
+	}
+
+	@SafeVarargs
+	@Override
+	public final <E, D> List<Map<String, Object>> toEntityObjectsFlatten(List<D> fromDatas, Pair<Class<? extends D>, Class<? extends E>>... clazz) {
+		return this.flatMap(this.toEntityObjects(fromDatas, clazz));
+	}
+
+	@Override
+	public List<Map<String, Object>> flatMap(List<?> objects, boolean addTypeCharacteristic) {
+		return objects.stream().map(o -> { //NOSONAR
+					Map<String, Object> flatten = this.defaultObjectMapper.convertValue(o, Map.class);
+					if (addTypeCharacteristic) {
+						String flattenType = o.getClass().toString();
+						flatten.putIfAbsent("_type", flattenType.substring(flattenType.lastIndexOf('.') + 1));
+					}
+					return flatten;
+				})
+				.toList();
+	}
+
+	private <F, T> List<T> tosObject(List<F> objects, BiFunction<Class<? extends T>, F, T> converterDelegate, List<Pair<Class<? extends F>, Class<? extends T>>> mapping) {
+		return
+				objects //NOSONAR
+						.stream()
+						.map(entity -> {
+							final Pair<Class<? extends F>, Class<? extends T>> type = this.extractMapping(entity.getClass(), mapping);
+							return converterDelegate.apply(type.getRight(), entity);
+						})
+						.toList();
+	}
+
+	private <F, T> Pair<Class<? extends F>, Class<? extends T>> extractMapping(Class<?> targetClazz, List<Pair<Class<? extends F>, Class<? extends T>>> mapping) {
+		return mapping.stream().filter(pairs -> pairs.getLeft().equals(targetClazz)).findFirst().orElseThrow();
+	}
+
+	@SuppressWarnings("unchecked")
+	private <E, D> ObjectWrapper<E, D> resolveWrapper(Predicate<ObjectWrapper<?, ?>> predicate, String exceptionMessage) {
+		return (ObjectWrapper<E, D>) this.wrappers.stream()
 				.sorted((o1, o2) -> Integer.compare(o2.getPriority(), o1.getPriority()))
 				.filter(predicate)
 				.findFirst()
@@ -82,14 +153,14 @@ public class WrapperContainerImpl implements WrapperContainer {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <E, D> EntityDomainWrapper<E, D> defaultWrapper() {
+	private <E, D> ObjectWrapper<E, D> defaultWrapper() {
 		if (null == this.defaultWrapper) {
 			this.defaultWrapper = WrapperBuilder.getInstance()
-					.setDomainClazz(Object.class)
-					.setEntityClazz(Object.class)
+					.setDataClazzType(Object.class)
+					.setEntityClazzType(Object.class)
 					.build();
 		}
-		return (EntityDomainWrapper<E, D>) this.defaultWrapper;
+		return (ObjectWrapper<E, D>) this.defaultWrapper;
 	}
 
 }

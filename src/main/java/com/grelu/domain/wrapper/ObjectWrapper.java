@@ -1,6 +1,9 @@
 package com.grelu.domain.wrapper;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @param <E> Type d'entité
@@ -11,7 +14,7 @@ import java.util.List;
  * Ce wrapper permettra convertir des entités, des DTO.
  * Il permettra aussi d'effectuer un map sur les différents objets soit à la demande, soit à la conversion
  */
-public interface EntityDomainWrapper<E, D> {
+public interface ObjectWrapper<E, D> {
 
 	public static final String DEFAULT_OPTION = "_";
 
@@ -19,11 +22,11 @@ public interface EntityDomainWrapper<E, D> {
 	 * Convertis un objet métier en entité
 	 * Attention déclenche un Map après la conversion
 	 *
-	 * @param domain domaine métier
+	 * @param fromData domaine métier
 	 * @return entité
 	 */
-	default E toEntity(D domain) {
-		return this.toEntity(domain, true);
+	default E toEntity(D fromData) {
+		return this.toEntity(fromData, true);
 	}
 
 	/**
@@ -40,24 +43,24 @@ public interface EntityDomainWrapper<E, D> {
 	/**
 	 * Convertis un objet métier en entité, en forçant le type de retours, sans utiliser celui configuré dans le bean
 	 *
-	 * @param domain     domaine métier
+	 * @param fromData   domaine métier
 	 * @param clazz      type d'entité
 	 * @param triggerMap déclencher un map ?
 	 * @return entité
 	 */
-	E toEntity(D domain, Class<E> clazz, boolean triggerMap);
+	E toEntity(D fromData, Class<E> clazz, boolean triggerMap);
 
 	/**
 	 * Convertis un objet métier en entité
 	 *
-	 * @param domain     domaine métier
+	 * @param fromData   domaine métier
 	 * @param triggerMap déclenchement du Map ?
 	 * @return entité
 	 */
-	E toEntity(D domain, boolean triggerMap);
+	E toEntity(D fromData, boolean triggerMap);
 
-	default List<E> toEntities(List<D> domains, Class<E> clazz) {
-		return this.toEntities(domains, clazz, true);
+	default List<E> toEntities(List<D> datas, Class<E> clazz) {
+		return this.toEntities(datas, clazz, true);
 	}
 
 	List<E> toEntities(List<D> domains, Class<E> clazz, boolean triggerMap);
@@ -66,73 +69,73 @@ public interface EntityDomainWrapper<E, D> {
 	 * Convertis une liste d'objets métier en entité
 	 * Déclenche un Map automatiquement
 	 *
-	 * @param domains domaines métiers
+	 * @param datas domaines métiers
 	 * @return Liste d'entité
 	 */
-	default List<E> toEntities(List<D> domains) {
-		return this.toEntities(domains, true);
+	default List<E> toEntities(List<D> datas) {
+		return this.toEntities(datas, true);
 	}
 
 	/**
 	 * Convertis une liste d'objets métier en entité
 	 *
-	 * @param domains    domaines métiers
+	 * @param fromDatas  domaines métiers
 	 * @param triggerMap Déclenchement du Map ?
 	 * @return Liste d'entité
 	 */
-	List<E> toEntities(List<D> domains, boolean triggerMap);
+	List<E> toEntities(List<D> fromDatas, boolean triggerMap);
 
 	/**
 	 * Convertis une entité en domaine métier
 	 * Déclenche un Map automatiquement
 	 *
-	 * @param entity entité
+	 * @param fromEntity entité
 	 * @return domaine
 	 */
-	default D toDomain(E entity) {
-		return this.toDomain(entity, true);
+	default D toData(E fromEntity) {
+		return this.toData(fromEntity, true);
 	}
 
 	/**
 	 * Convertis une entité en domaine métier
 	 *
-	 * @param entity     entité
+	 * @param fromEntity entité
 	 * @param triggerMap Déclenchement du Map ?
 	 * @return
 	 */
-	D toDomain(E entity, boolean triggerMap);
+	D toData(E fromEntity, boolean triggerMap);
 
-	default D toDomain(E entity, Class<D> clazz) {
-		return this.toDomain(entity, clazz, true);
+	default D toData(E fromEntity, Class<D> clazz) {
+		return this.toData(fromEntity, clazz, true);
 	}
 
-	D toDomain(E entity, Class<D> clazz, boolean triggerMap);
+	D toData(E fromEntity, Class<D> clazz, boolean triggerMap);
 
 	/**
 	 * Convertis une liste d'entité en domaine métier
 	 * Déclenche un Map automatiquement
 	 *
-	 * @param entities liste des entités
+	 * @param fromEntities liste des entités
 	 * @return liste des domaines
 	 */
-	default List<D> toDomains(List<E> entities) {
-		return this.toDomains(entities, true);
+	default List<D> toDatas(List<E> fromEntities) {
+		return this.toDatas(fromEntities, true);
 	}
 
 	/**
 	 * Convertis une liste d'entité en domaine métier
 	 *
-	 * @param entities   iste des entités
-	 * @param triggerMap Déclenchement du Map ?
+	 * @param fromEntities iste des entités
+	 * @param triggerMap   Déclenchement du Map ?
 	 * @return liste des domaines
 	 */
-	List<D> toDomains(List<E> entities, boolean triggerMap);
+	List<D> toDatas(List<E> fromEntities, boolean triggerMap);
 
-	default List<D> toDomains(List<E> entities, Class<D> clazz) {
-		return this.toDomains(entities, clazz, true);
+	default List<D> toDatas(List<E> fromEntities, Class<D> clazz) {
+		return this.toDatas(fromEntities, clazz, true);
 	}
 
-	List<D> toDomains(List<E> entities, Class<D> clazz, boolean triggerMap);
+	List<D> toDatas(List<E> fromEntities, Class<D> clazz, boolean triggerMap);
 
 	/**
 	 * Map une entité
@@ -146,26 +149,26 @@ public interface EntityDomainWrapper<E, D> {
 	/**
 	 * Applique la même chose que la fonction mapEntity, mais sur une liste
 	 *
-	 * @param entities liste des entités
+	 * @param entity liste des entités
 	 * @return liste des entités après Map
 	 */
-	List<E> mapEntities(List<E> entities);
+	List<E> mapEntities(List<E> entity);
 
 	/**
 	 * Même fonctionnement que le mapping des entités
 	 *
-	 * @param domain domaine
+	 * @param data domaine
 	 * @return domaine après map
 	 */
-	D mapDomain(D domain);
+	D mapData(D data);
 
 	/**
 	 * Même principe que la fonction mapDomain, mais sur une liste
 	 *
-	 * @param domains liste des domaines
+	 * @param datas liste des domaines
 	 * @return liste des domaines après Map
 	 */
-	List<D> mapDomains(List<D> domains);
+	List<D> mapDatas(List<D> datas);
 
 	/**
 	 * Support un domaine ?
@@ -173,8 +176,8 @@ public interface EntityDomainWrapper<E, D> {
 	 * @param clazz type du domaine
 	 * @return Oui / Non ?
 	 */
-	default boolean supportDomain(Class<?> clazz) {
-		return this.supportDomain(clazz, DEFAULT_OPTION);
+	default boolean supportData(Class<?> clazz) {
+		return this.supportData(clazz, DEFAULT_OPTION);
 	}
 
 	/**
@@ -184,7 +187,7 @@ public interface EntityDomainWrapper<E, D> {
 	 * @param option spécification
 	 * @return Oui / Non ?
 	 */
-	boolean supportDomain(Class<?> clazz, String option);
+	boolean supportData(Class<?> clazz, String option);
 
 	/**
 	 * Support une entité ?
@@ -215,4 +218,45 @@ public interface EntityDomainWrapper<E, D> {
 	default int getPriority() {
 		return -1;
 	}
+
+	/**
+	 * Permets de définir le context
+	 * Ce context est un état, il peut être modifié
+	 *
+	 * @param parameters
+	 * @return
+	 */
+	ObjectWrapper<E, D> setContextParameters(Map<String, Object> parameters);
+
+	default CompletableFuture<D> toDataAsync(E fromEntity) {
+		return CompletableFuture.supplyAsync(() -> this.toData(fromEntity));
+	}
+
+	default List<CompletableFuture<D>> toDatasAsync(List<E> fromEntities) {
+		return fromEntities.stream().map(this::toDataAsync).toList();
+	}
+
+	default CompletableFuture<E> toEntityAsync(D fromData) {
+		return CompletableFuture.supplyAsync(() -> this.toEntity(fromData));
+	}
+
+	default List<CompletableFuture<E>> toEntitiesAsync(List<D> fromDatas) {
+		return fromDatas.stream().map(this::toEntityAsync).toList();
+	}
+	
+	default Optional<E> toSafeEntity(D fromData) {
+		if (null == fromData) {
+			return Optional.empty();
+		}
+		return Optional.ofNullable(this.toEntity(fromData));
+	}
+
+
+	default Optional<D> toSafeData(E fromEntity) {
+		if (null == fromEntity) {
+			return Optional.empty();
+		}
+		return Optional.ofNullable(this.toData(fromEntity));
+	}
+
 }

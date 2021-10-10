@@ -1,7 +1,7 @@
 package com.test.grelu.domain.wrapper;
 
 
-import com.grelu.domain.wrapper.EntityDomainWrapper;
+import com.grelu.domain.wrapper.ObjectWrapper;
 import com.grelu.domain.wrapper.builder.WrapperBuilder;
 import com.test.grelu.domain.wrapper.mock.DomainMock;
 import com.test.grelu.domain.wrapper.mock.EntityMock;
@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,12 +31,12 @@ public class WrapperBuilderTest {
 	public void testBuild() {
 		WrapperBuilder<EntityMock, DomainMock> wrapperBuilder = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
 
-		EntityDomainWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
 
-		assertThat(wrapper).isInstanceOf(EntityDomainWrapper.class);
+		assertThat(wrapper).isInstanceOf(ObjectWrapper.class);
 
 		assertThatThrownBy(() -> {
-			wrapperBuilder.addDomainMapper(o -> o);
+			wrapperBuilder.addDataMapper(o -> o);
 		}).isInstanceOf(IllegalStateException.class);
 
 
@@ -54,7 +56,7 @@ public class WrapperBuilderTest {
 		});
 
 
-		EntityDomainWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
 
 		EntityMock en = new EntityMock();
 		en.lastname = "jean";
@@ -83,7 +85,7 @@ public class WrapperBuilderTest {
 		});
 
 
-		EntityDomainWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
 
 		EntityMock en1 = new EntityMock();
 		en1.lastname = "jean";
@@ -105,7 +107,7 @@ public class WrapperBuilderTest {
 	public void testConverterSingleEntityDomain() {
 		WrapperBuilder<EntityMock, DomainMock> wrapperBuilder = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
 
-		wrapperBuilder.setToDomainConverter(context -> {
+		wrapperBuilder.setDataConverter(context -> {
 			DomainMock domain = new DomainMock();
 			domain.firstname = context.getValue().firstname + "_";
 			domain.lastname = context.getValue().lastname + "_";
@@ -120,7 +122,7 @@ public class WrapperBuilderTest {
 
 		DomainMock domain = wrapperBuilder
 				.build()
-				.toDomain(entity);
+				.toData(entity);
 
 		assertThat(domain.firstname).isEqualTo("eric_");
 		assertThat(domain.lastname).isEqualTo("pierre_");
@@ -130,8 +132,8 @@ public class WrapperBuilderTest {
 	@Test
 	public void testConverterSingleEntityInheritedDomain() {
 		WrapperBuilder<EntityMock, DomainMock> wrapperBuilder = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
-		
-		wrapperBuilder.setToDomainConverter(context -> {
+
+		wrapperBuilder.setDataConverter(context -> {
 			DomainMock domain = new InheritedDomainMock();
 			domain.firstname = context.getValue().firstname + "_";
 			domain.lastname = context.getValue().lastname + "_";
@@ -146,7 +148,7 @@ public class WrapperBuilderTest {
 
 		DomainMock domain = wrapperBuilder
 				.build()
-				.toDomain(entity);
+				.toData(entity);
 
 		assertThat(domain.firstname).isEqualTo("eric_");
 		assertThat(domain.lastname).isEqualTo("pierre_");
@@ -160,14 +162,14 @@ public class WrapperBuilderTest {
 
 		AtomicReference<Date> date = new AtomicReference<>(new Date());
 
-		wrapperBuilder.setToDomainConverter(context -> {
+		wrapperBuilder.setDataConverter(context -> {
 			DomainMock domain = new DomainMock();
 			domain.firstname = "jean";
 			domain.lastname = "jean";
 			domain.age = 30;
 
 			return domain;
-		}).setToEntityConverter(context -> {
+		}).setEntityConverter(context -> {
 			EntityMock entity = new EntityMock();
 			entity.firstname = "eric";
 			entity.lastname = "eric";
@@ -183,9 +185,9 @@ public class WrapperBuilderTest {
 		entity2.firstname = "luc";
 		entity2.lastname = "po";
 
-		EntityDomainWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
 
-		List<DomainMock> domains = wrapper.toDomains(Arrays.asList(entity1, entity2));
+		List<DomainMock> domains = wrapper.toDatas(Arrays.asList(entity1, entity2));
 
 		assertThat(domains).hasSize(2);
 		assertThat(domains.get(0)).satisfies(this::isDomain);
@@ -200,31 +202,74 @@ public class WrapperBuilderTest {
 	@Test
 	public void testResolvable() {
 		WrapperBuilder<EntityMock, DomainMock> wrapperBuilderWithoutCustom = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
-		EntityDomainWrapper<EntityMock, DomainMock> wrapper = wrapperBuilderWithoutCustom.build();
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilderWithoutCustom.build();
 
 		assertThat(wrapper.supportEntity(EntityMock.class)).isTrue();
 		assertThat(wrapper.supportEntity(DomainMock.class)).isFalse();
-		assertThat(wrapper.supportDomain(DomainMock.class)).isTrue();
-		assertThat(wrapper.supportDomain(EntityDomainWrapper.class)).isFalse();
+		assertThat(wrapper.supportData(DomainMock.class)).isTrue();
+		assertThat(wrapper.supportData(ObjectWrapper.class)).isFalse();
 
 		WrapperBuilder<EntityMock, DomainMock> wrapperBuilderWithCustom = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
 
-		wrapperBuilderWithCustom.setSupportDomain((clazz, option) -> {
+		wrapperBuilderWithCustom.setSupportData((clazz, option) -> {
 			return clazz.equals(DomainMock.class) && option != null && option.contains("dorian");
 		}).setSupportEntity((clazz, option) -> {
 			return clazz.equals(EntityMock.class) && option != null && option.contains("dorian");
 		});
 
-		EntityDomainWrapper<EntityMock, DomainMock> secondWrapper = wrapperBuilderWithCustom.build();
+		ObjectWrapper<EntityMock, DomainMock> secondWrapper = wrapperBuilderWithCustom.build();
 
 		assertThat(secondWrapper.supportEntity(EntityMock.class, "dorian")).isTrue();
 		assertThat(secondWrapper.supportEntity(EntityMock.class, "jean")).isFalse();
 		assertThat(secondWrapper.supportEntity(DomainMock.class, "dorian")).isFalse();
 
-		assertThat(secondWrapper.supportDomain(DomainMock.class, "dorian")).isTrue();
-		assertThat(secondWrapper.supportDomain(DomainMock.class, "jean")).isFalse();
-		assertThat(secondWrapper.supportDomain(EntityDomainWrapper.class, "dorian")).isFalse();
+		assertThat(secondWrapper.supportData(DomainMock.class, "dorian")).isTrue();
+		assertThat(secondWrapper.supportData(DomainMock.class, "jean")).isFalse();
+		assertThat(secondWrapper.supportData(ObjectWrapper.class, "dorian")).isFalse();
 
+	}
+
+
+	@Test
+	public void testAsyncConvert() throws ExecutionException, InterruptedException {
+		WrapperBuilder<EntityMock, DomainMock> wrapperBuilder = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class);
+
+		AtomicReference<Date> date = new AtomicReference<>(new Date());
+
+		wrapperBuilder.setDataConverter(context -> {
+			Thread.sleep(2000);
+
+			DomainMock domain = new DomainMock();
+			domain.firstname = "jean";
+			domain.lastname = "jean";
+			domain.age = 30;
+
+			return domain;
+		}).setEntityConverter(context -> {
+			Thread.sleep(2000);
+			EntityMock entity = new EntityMock();
+			entity.firstname = "eric";
+			entity.lastname = "eric";
+			entity.birthday = date.get();
+			return entity;
+		});
+
+		EntityMock entity1 = new EntityMock();
+		entity1.firstname = "eric";
+		entity1.lastname = "pierre";
+
+
+		ObjectWrapper<EntityMock, DomainMock> wrapper = wrapperBuilder.build();
+
+		CompletableFuture<DomainMock> futureDomain = wrapper.toDataAsync(entity1);
+		DomainMock domain = futureDomain.get();
+
+		assertThat(domain).satisfies(this::isDomain);
+
+		CompletableFuture<EntityMock> futureEntity = wrapper.toEntityAsync(domain);
+		EntityMock entity = futureEntity.get();
+
+		assertThat(entity).satisfies(this::isEntity);
 	}
 
 	private void isDomain(DomainMock domain) {
@@ -237,5 +282,6 @@ public class WrapperBuilderTest {
 		assertThat(entity.firstname).isEqualTo("eric");
 		assertThat(entity.lastname).isEqualTo("eric");
 	}
+
 
 }

@@ -2,11 +2,12 @@ package com.grelu.domain.wrapper.builder;
 
 
 import com.grelu.domain.wrapper.CustomModelMapper;
-import com.grelu.domain.wrapper.EntityDomainWrapper;
+import com.grelu.domain.wrapper.ObjectWrapper;
 import com.grelu.domain.wrapper.helper.Mapper;
 import com.grelu.domain.wrapper.helper.Resolvable;
-import com.grelu.domain.wrapper.helper.ToDomainConverter;
+import com.grelu.domain.wrapper.helper.ToDataConverter;
 import com.grelu.domain.wrapper.helper.ToEntityConverter;
+import com.grelu.domain.wrapper.impl.ObjectWrapperImpl;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,17 +23,17 @@ public class WrapperBuilder<E, D> {
 
 	private final ModelMapper mapper;
 
-	private final Deque<Mapper<E>> entityMapper;
+	private final Deque<Mapper<E>> entitiesMapper;
 
-	private final Deque<Mapper<D>> domainMapper;
+	private final Deque<Mapper<D>> datasMapper;
 
-	private ToDomainConverter<E, D> toDomainConverter = null;
+	private ToDataConverter<E, D> toDataConverter = null;
 
 	private ToEntityConverter<E, D> toEntityConverter = null;
 
-	private Class<E> entityClazz = null;
+	private Class<E> entityClazzType = null;
 
-	private Class<D> domainClazz = null;
+	private Class<D> dataClazzType = null;
 
 	private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
@@ -40,7 +41,7 @@ public class WrapperBuilder<E, D> {
 
 	private Resolvable supportEntity = null;
 
-	private Resolvable supportDomain = null;
+	private Resolvable supportData = null;
 
 	private int priority = -1;
 
@@ -49,16 +50,16 @@ public class WrapperBuilder<E, D> {
 		this(null, null);
 	}
 
-	private WrapperBuilder(Class<E> entityClazz, Class<D> domainClazz) {
-		this(new CustomModelMapper(), entityClazz, domainClazz);
+	private WrapperBuilder(Class<E> entityClazzType, Class<D> dataClazzType) {
+		this(new CustomModelMapper(), entityClazzType, dataClazzType);
 	}
 
-	private WrapperBuilder(ModelMapper modelMapper, Class<E> entityClazz, Class<D> domainClazz) {
-		logger.trace("Create new builder for entity ({}), domain ({}), and {} mapper", entityClazz, domainClazz, modelMapper.getClass());
-		this.entityClazz = entityClazz;
-		this.domainClazz = domainClazz;
-		this.entityMapper = new ArrayDeque<>();
-		this.domainMapper = new ArrayDeque<>();
+	private WrapperBuilder(ModelMapper modelMapper, Class<E> entityClazzType, Class<D> dataClazzType) {
+		logger.trace("Create new builder for entity ({}), domain ({}), and {} mapper", entityClazzType, dataClazzType, modelMapper.getClass());
+		this.entityClazzType = entityClazzType;
+		this.dataClazzType = dataClazzType;
+		this.entitiesMapper = new ArrayDeque<>();
+		this.datasMapper = new ArrayDeque<>();
 		this.mapper = modelMapper;
 	}
 
@@ -71,12 +72,12 @@ public class WrapperBuilder<E, D> {
 		return new WrapperBuilder<>(mapper, null, null);
 	}
 
-	public static <E, D> WrapperBuilder<E, D> getInstance(ModelMapper mapper, Class<E> entityClazz, Class<D> domainClazz) {
-		return new WrapperBuilder<>(mapper, entityClazz, domainClazz);
+	public static <E, D> WrapperBuilder<E, D> getInstance(ModelMapper mapper, Class<E> firstClazzType, Class<D> secondClazzType) {
+		return new WrapperBuilder<>(mapper, firstClazzType, secondClazzType);
 	}
 
-	public static <E, D> WrapperBuilder<E, D> getInstance(Class<E> entityClazz, Class<D> domainClazz) {
-		return new WrapperBuilder<>(entityClazz, domainClazz);
+	public static <E, D> WrapperBuilder<E, D> getInstance(Class<E> firstClazzType, Class<D> secondClazzType) {
+		return new WrapperBuilder<>(firstClazzType, secondClazzType);
 	}
 
 	public WrapperBuilder<E, D> setPriority(int priority) {
@@ -84,24 +85,24 @@ public class WrapperBuilder<E, D> {
 		return this;
 	}
 
-	public WrapperBuilder<E, D> setSupportEntity(Resolvable supportEntity) {
-		logger.trace("{} is support entity", supportEntity != null ? "Define" : "Reset");
-		this.supportEntity = supportEntity;
+	public WrapperBuilder<E, D> setSupportEntity(Resolvable r) {
+		logger.trace("{} is support entity", r != null ? "Define" : "Reset");
+		this.supportEntity = r;
 		return this;
 	}
 
-	public WrapperBuilder<E, D> setSupportDomain(Resolvable supportDomain) {
-		logger.trace("{} is support domain", supportDomain != null ? "Define" : "Reset");
-		this.supportDomain = supportDomain;
+	public WrapperBuilder<E, D> setSupportData(Resolvable r) {
+		logger.trace("{} is support domain", r != null ? "Define" : "Reset");
+		this.supportData = r;
 		return this;
 	}
 
-	public WrapperBuilder<E, D> addDomainMapper(Mapper<D> mapper) {
+	public WrapperBuilder<E, D> addDataMapper(Mapper<D> mapper) {
 		this.checkState();
 		logger.trace("Add domain mapper");
 		try {
 			this.readWriteLock.readLock().lock();
-			this.domainMapper.add(mapper);
+			this.datasMapper.add(mapper);
 		} finally {
 			this.readWriteLock.readLock().unlock();
 		}
@@ -109,14 +110,14 @@ public class WrapperBuilder<E, D> {
 	}
 
 
-	public WrapperBuilder<E, D> setEntityClazz(Class<E> clazz) {
-		this.entityClazz = clazz;
+	public WrapperBuilder<E, D> setEntityClazzType(Class<E> clazz) {
+		this.entityClazzType = clazz;
 		return this;
 	}
 
 
-	public WrapperBuilder<E, D> setDomainClazz(Class<D> clazz) {
-		this.domainClazz = clazz;
+	public WrapperBuilder<E, D> setDataClazzType(Class<D> clazz) {
+		this.dataClazzType = clazz;
 		return this;
 	}
 
@@ -125,31 +126,31 @@ public class WrapperBuilder<E, D> {
 		logger.trace("Add entity mapper");
 		try {
 			this.readWriteLock.readLock().lock();
-			this.entityMapper.add(mapper);
+			this.entitiesMapper.add(mapper);
 		} finally {
 			this.readWriteLock.readLock().unlock();
 		}
 		return this;
 	}
 
-	public WrapperBuilder<E, D> setToDomainConverter(ToDomainConverter<E, D> toDomainConverter) {
+	public WrapperBuilder<E, D> setDataConverter(ToDataConverter<E, D> converter) {
 		this.checkState();
-		logger.trace("{} domain converter", toDomainConverter != null ? "Define" : "Unset");
+		logger.trace("{} domain converter", converter != null ? "Define" : "Unset");
 		try {
 			this.readWriteLock.writeLock().lock();
-			this.toDomainConverter = toDomainConverter;
+			this.toDataConverter = converter;
 		} finally {
 			this.readWriteLock.writeLock().unlock();
 		}
 		return this;
 	}
 
-	public WrapperBuilder<E, D> setToEntityConverter(ToEntityConverter<E, D> toEntityConverter) {
+	public WrapperBuilder<E, D> setEntityConverter(ToEntityConverter<E, D> converter) {
 		this.checkState();
-		logger.trace("{} entity converter", toEntityConverter != null ? "Define" : "Unset");
+		logger.trace("{} entity converter", converter != null ? "Define" : "Unset");
 		try {
 			this.readWriteLock.writeLock().lock();
-			this.toEntityConverter = toEntityConverter;
+			this.toEntityConverter = converter;
 		} finally {
 			this.readWriteLock.writeLock().unlock();
 		}
@@ -157,21 +158,21 @@ public class WrapperBuilder<E, D> {
 	}
 
 
-	public EntityDomainWrapper<E, D> build() {
+	public ObjectWrapper<E, D> build() {
 		this.checkState(true);
 		logger.trace("Trigger build");
 		try {
 			this.readWriteLock.writeLock().lock();
 			this.hasBuild = true;
-			return new EntityDomainWrapperImpl<>(this.mapper,
+			return new ObjectWrapperImpl<>(this.mapper,
 					this.toEntityConverter,
-					this.toDomainConverter,
-					this.entityMapper,
-					this.domainMapper,
-					this.entityClazz,
-					this.domainClazz,
+					this.toDataConverter,
+					this.entitiesMapper,
+					this.datasMapper,
+					this.entityClazzType,
+					this.dataClazzType,
 					this.supportEntity,
-					this.supportDomain,
+					this.supportData,
 					this.priority);
 		} finally {
 			this.readWriteLock.writeLock().unlock();
@@ -191,7 +192,7 @@ public class WrapperBuilder<E, D> {
 				throw new IllegalStateException("The wrapper has already builded");
 			}
 			logger.trace("Check integrity");
-			if (checkIntegrity && (this.entityClazz == null || this.domainClazz == null)) {
+			if (checkIntegrity && (this.entityClazzType == null || this.dataClazzType == null)) {
 				throw new IllegalStateException("Cannot build Wrapper without class informations. Please use setEntityClazz() and setDomainClazz() methods.");
 			}
 
