@@ -140,8 +140,8 @@ public interface WrapperContainer {
 				.toList();
 	}
 
-	public <E, D> ObjectWrapper<? super E, D> resolveDataWrapper(Class<?> target, String option);
+	<E, D> ObjectWrapper<? super E, D> resolveDataWrapper(Class<?> target, String option);
 
-	public <E, D> ObjectWrapper<E, ? super D> resolveEntityWrapper(Class<?> target, String option);
+	<E, D> ObjectWrapper<E, ? super D> resolveEntityWrapper(Class<?> target, String option);
 
 }

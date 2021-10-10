@@ -1,7 +1,6 @@
 package com.test.grelu.mapper.core;
 
 
-
 import com.grelu.mapper.core.ObjectWrapper;
 import com.grelu.mapper.core.builder.WrapperBuilder;
 import com.test.grelu.mapper.core.mock.DomainMock;
