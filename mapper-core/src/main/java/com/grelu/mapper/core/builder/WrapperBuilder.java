@@ -8,9 +8,9 @@ import com.grelu.mapper.core.helper.Resolvable;
 import com.grelu.mapper.core.helper.ToDataConverter;
 import com.grelu.mapper.core.helper.ToEntityConverter;
 import com.grelu.mapper.core.impl.ObjectWrapperImpl;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.modelmapper.ModelMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -19,7 +19,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class WrapperBuilder<E, D> {
 
-	private static final Logger logger = LoggerFactory.getLogger(WrapperBuilder.class);
+	private static final Logger logger = LogManager.getLogger(WrapperBuilder.class);
 
 	private final ModelMapper mapper;
 

@@ -6,7 +6,6 @@ import com.grelu.mapper.core.helper.Converter;
 import com.grelu.mapper.core.helper.Mapper;
 import com.grelu.mapper.core.helper.Resolvable;
 import org.modelmapper.ModelMapper;
-import org.springframework.util.Assert;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -166,7 +165,10 @@ public final class ObjectWrapperImpl<E, D> implements ObjectWrapper<E, D> {
 	}
 
 	private <T, P> boolean support(Class<T> targetClazz, Class<P> compareClazz, String option, Resolvable delegate) {
-		Assert.notNull(option, "Required option is missing");
+		if (null == option) {
+			throw new IllegalArgumentException("Missing required option");
+		}
+
 		if (delegate != null) {
 			return delegate.support(targetClazz, option);
 		}

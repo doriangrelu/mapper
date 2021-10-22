@@ -1,9 +1,10 @@
 package com.grelu.mapper.core.helper;
 
 import com.grelu.mapper.core.PureObject;
-import org.slf4j.LoggerFactory;
+
 
 import java.util.Deque;
+
 
 @FunctionalInterface
 public interface Mapper<E> {
@@ -31,7 +32,6 @@ public interface Mapper<E> {
 		try {
 			return recursiveMap(delegate.map(target), queue);
 		} catch (Exception e) { // En cas d'erreur du converter, on ignore, et on log
-			LoggerFactory.getLogger(Mapper.class).error("Illegal exception in mapping state. Ignore mapper [{}]", delegate, e);
 			return recursiveMap(target, queue);
 		}
 	}

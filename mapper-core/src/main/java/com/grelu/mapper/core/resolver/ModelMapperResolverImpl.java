@@ -1,11 +1,11 @@
 package com.grelu.mapper.core.resolver;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.stereotype.Component;
+
 
 import java.util.Optional;
 
-@Component
+
 class ModelMapperResolverImpl implements ModelMapperResolver {
 
 	private final Optional<ModelMapper> resolvedMapper;
