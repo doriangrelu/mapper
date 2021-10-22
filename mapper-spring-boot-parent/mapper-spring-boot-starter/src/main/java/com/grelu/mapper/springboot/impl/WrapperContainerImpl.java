@@ -43,8 +43,8 @@ class WrapperContainerImpl implements WrapperContainer {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <E, D> E toEntity(Class<?> clazz, D fromSecond, boolean triggerMap, String option) {
-		return this.<E, D>resolveEntityWrapper(clazz, option).toEntity(fromSecond, (Class<E>) clazz, triggerMap);
+	public <E, D> E toEntity(Class<?> clazz, D fromData, boolean triggerMap, String option) {
+		return this.<E, D>resolveEntityWrapper(clazz, option).toEntity(fromData, (Class<E>) clazz, triggerMap);
 	}
 
 	@SuppressWarnings("unchecked")

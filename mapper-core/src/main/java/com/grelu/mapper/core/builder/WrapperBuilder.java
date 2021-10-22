@@ -72,12 +72,12 @@ public class WrapperBuilder<E, D> {
 		return new WrapperBuilder<>(mapper, null, null);
 	}
 
-	public static <E, D> WrapperBuilder<E, D> getInstance(ModelMapper mapper, Class<E> firstClazzType, Class<D> secondClazzType) {
-		return new WrapperBuilder<>(mapper, firstClazzType, secondClazzType);
+	public static <E, D> WrapperBuilder<E, D> getInstance(ModelMapper mapper, Class<E> entityClazz, Class<D> dataClazz) {
+		return new WrapperBuilder<>(mapper, entityClazz, dataClazz);
 	}
 
-	public static <E, D> WrapperBuilder<E, D> getInstance(Class<E> firstClazzType, Class<D> secondClazzType) {
-		return new WrapperBuilder<>(firstClazzType, secondClazzType);
+	public static <E, D> WrapperBuilder<E, D> getInstance(Class<E> entityClazz, Class<D> dataClazz) {
+		return new WrapperBuilder<>(entityClazz, dataClazz);
 	}
 
 	public WrapperBuilder<E, D> setPriority(int priority) {

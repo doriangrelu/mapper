@@ -70,15 +70,15 @@ public interface WrapperContainer {
 		return this.toEntity(clazz, fromData, true, ObjectWrapper.DEFAULT_OPTION);
 	}
 
-	<E, D> E toEntity(Class<?> clazz, D fromSecond, boolean triggerMap, String option);
+	<E, D> E toEntity(Class<?> clazz, D fromData, boolean triggerMap, String option);
 
 	default <E, D> List<E> toEntities(Class<?> clazz, List<D> fromDatas) {
 		return this.toEntities(clazz, fromDatas, true, ObjectWrapper.DEFAULT_OPTION);
 	}
 
 	@SuppressWarnings("unchecked")
-	default <E, D> List<E> toEntities(Class<?> clazz, List<D> fromSeconds, boolean triggerMap, String option) {
-		return (List<E>) fromSeconds.parallelStream()
+	default <E, D> List<E> toEntities(Class<?> clazz, List<D> fromDatas, boolean triggerMap, String option) {
+		return (List<E>) fromDatas.parallelStream()
 				.map(domain -> this.toEntity(clazz, domain, triggerMap, option))
 				.toList();
 	}
