@@ -2,8 +2,6 @@ package com.test.grelu.mapper.sapstarter;
 
 import com.grelu.mapper.core.ObjectWrapper;
 import com.grelu.mapper.core.builder.WrapperBuilder;
-import com.grelu.gsmarts.utility.reflection.ReflectionUtils;
-
 
 import com.grelu.mapper.springboot.WrapperContainer;
 import com.test.grelu.mapper.sapstarter.mock.DomainMock;
@@ -13,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
 
@@ -26,14 +26,19 @@ public class WrapperContainerImplTest {
 	private WrapperContainer container;
 
 	@Test
-	public void testAddWrapperInContainer() throws NoSuchFieldException, IllegalAccessException {
+	public void testAddWrapperInContainer() throws ReflectiveOperationException {
 		ObjectWrapper<EntityMock, DomainMock> firstWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
 		ObjectWrapper<EntityMock, DomainMock> secondWrapper = WrapperBuilder.getInstance(EntityMock.class, DomainMock.class).build();
 
 		container.registerWrappers(firstWrapper)
 				.registerWrappers(secondWrapper);
 
-		List<ObjectWrapper<?, ?>> wrappers = ReflectionUtils.get(container, "wrappers");
+		Field field = ReflectionUtils.findField(container.getClass(), "wrappers");
+		if (null == field) {
+			throw new ReflectiveOperationException("Missing required field");
+		}
+		field.setAccessible(true);
+		List<ObjectWrapper<?, ?>> wrappers = (List<ObjectWrapper<?, ?>>) field.get(container);
 
 		Assertions.assertThat(wrappers).hasSize(2).contains(firstWrapper, secondWrapper);
 	}
